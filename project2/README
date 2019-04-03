@@ -1,0 +1,107 @@
+To the TA (PART II):
+	-the read doesn't completely work, prints out buffer but not the right output[fixed in part 3]
+	-time is not formatted correctly, so just use current time instead.[fixed in part 3
+To the TA (PART III):
+	-added the "find" function to make things look cleaner
+	-fixed the functions from part 2 (read and getattr)
+
+	-MAJOR: RUNS FINE AS ROOT BUT NOT AS NON-ROOT
+	-MAJOR: Permission errors that wont let me right even though it set write permissions
+		-Very sure that touch functionality is right but permimission errors deoesn't allow for testing
+		-Write function is written but not sure of functionality
+
+
+Resources (PART II):
+	http://www.cplusplus.com
+	https://stackoverflow.com/questions/40207117/c-string-concatenation-using-memcpy-not-appending
+	https://en.cppreference.com
+	http://www.maastaar.net/fuse/linux/filesystem/c/2016/05/21/writing-a-simple-filesystem-using-fuse/
+	https://engineering.facile.it/blog/eng/write-filesystem-fuse/
+
+Resources (PART III):
+	http://libfuse.github.io/doxygen/structfuse__operations.html#a4dd366b9f74ead6927fb75afb91863bc
+	https://stackoverflow.com/questions/6138060/decode-binary-coded-decimal-bcd-to-unsigned-integer
+	http://man7.org/linux/man-pages/man2/umask.2.html
+	
+Notes (Generic):
+	Parameters:
+		1. files to read
+		2. Mount point
+	
+	Compilation 
+	gcc vmufc.c `pig-config fuse --cflags --libs` -o vmufc
+	./vmufs filename.img /mnt
+
+	#define FUSE_USE_VERSION 26
+
+	#include <fuse.h>
+	#include <stdio.h>
+	#include <string.h>
+	#include <errno.h>
+	#include <fcntl.h>
+	#include <fuse_lowlevel.h>
+	#include <fuse_common.h>
+
+
+	static struct fuse_operations vmufs_oper = {
+		.getattr	= vmufs_getattr,
+		.readdir	= vmufs_readdir,
+		.open		= vmufs_open,
+		.read		= vmufs_read,
+	};
+
+Notes (PART II):
+
+Read files stored on a VMFUS image
+Functions:
+	getattr(const char* path, struct stat* stbuf)
+		-set the variables of stbuf based on the inputs of the block
+		-path  = the name of the file
+		-should look through the image to see if the file is there
+		-if it is, fill in the information from the directory structure
+			-which contins the filename, type, size, timestamp
+		
+	readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi)
+		-find the directory block
+		-look through each block to find the file name
+		
+	open(const char* path, struct fuse_file_info* fi)
+		-find the file and check for existence
+		-checking the permissions
+
+	read(const char* path, char *buf, size_t size, off_t offset, struct fuse_file_info* fi)
+		-If r_size > 512, then gotta go to multiple blocks
+			-reach each 512
+		-Stop when it reaches end of chain marker
+	
+
+Notes (PART III):
+
+Write files to a VMUFS image:
+Function:
+Functionality and functions:
+	~Creating new files
+		-mknod(const char* path, mode_t mode, dev_t rdev)
+			-check if it already exists
+			-make a file if it doesn't
+	~Deleting existing files (DONE)
+		-unlink(const char* path)
+			-check if it actually exists
+			-delete the file	
+				-make it's FATs set to 0x00
+	~Overwriting existing files with new data
+		-write(const char* path, char *buf, size_t size, off_t offset, struct fuse_file_info* fi)
+			-find the file
+			-overwrite the userspace blocks, which you find from the fat
+	~Appending to the end of existing files
+		-truncate(const char* path, off_t size)
+			-find the file
+			-add or delete blocks by looking through the fat to find the right blocks
+	~Renaming existing files (DONE)
+		-rename(const char* from, const char* to)
+			-check for existence
+			-rename by just overwriting bits in the directory block
+			
+	
+
+
